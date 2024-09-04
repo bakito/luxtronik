@@ -77,7 +77,7 @@ func TestIntegration_Refreshed_Calculations(t *testing.T) {
 
 	pm := NewCalculationsMap()
 
-	sigChan := make(chan os.Signal)
+	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt)
 	tkr := time.NewTicker(3 * time.Second)
 

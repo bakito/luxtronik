@@ -167,25 +167,6 @@ func (c *Client) readChar() (byte, error) {
 	return buf[0], nil
 }
 
-func (c *Client) netRead(b []byte) (int, error) {
-	var (
-		n, cur, end int
-		err         error
-	)
-	end = len(b)
-	for {
-		if n, err = c.conn.Read(b[cur:end]); err != nil {
-			cur += n
-			return cur, fmt.Errorf("netRead failed to read with error: %w", err)
-		}
-		cur += n
-		if cur == end {
-			break
-		}
-	}
-	return end, nil
-}
-
 // readAndWrite
 // Read and/or write value from and/or to heatpump.
 // This method is essentially a wrapper for the _read() and _write()
