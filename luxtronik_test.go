@@ -20,7 +20,7 @@ func TestIntegration_Client(t *testing.T) {
 		heatPumpIP = "192.168.2.250" + ":" + DefaultPort
 	}
 
-	runTest := func(newMap func() DataTypeMap, readFromNet func(*Client, DataTypeMap) error) func(t *testing.T) {
+	runTest := func(newMap func() DataTypeMap, readFromNet func(Client, DataTypeMap) error) func(t *testing.T) {
 		return func(t *testing.T) {
 			c := MustNewClient(heatPumpIP, Options{
 				SafeMode: true,
@@ -54,14 +54,14 @@ func TestIntegration_Client(t *testing.T) {
 		}
 	}
 
-	t.Run("Parameter", runTest(NewParameterMap, func(c *Client, pm DataTypeMap) error {
-		return c.readParameters(pm)
+	t.Run("Parameter", runTest(NewParameterMap, func(c Client, pm DataTypeMap) error {
+		return c.ReadParameters(pm)
 	}))
-	t.Run("Visibilities", runTest(NewVisibilitiesMap, func(c *Client, pm DataTypeMap) error {
-		return c.readVisibilities(pm)
+	t.Run("Visibilities", runTest(NewVisibilitiesMap, func(c Client, pm DataTypeMap) error {
+		return c.ReadVisibilities(pm)
 	}))
-	t.Run("Calculations", runTest(NewCalculationsMap, func(c *Client, pm DataTypeMap) error {
-		return c.readCalculations(pm)
+	t.Run("Calculations", runTest(NewCalculationsMap, func(c Client, pm DataTypeMap) error {
+		return c.ReadCalculations(pm)
 	}))
 }
 
@@ -83,7 +83,7 @@ func TestIntegration_Refreshed_Calculations(t *testing.T) {
 
 	for {
 
-		require.NoError(t, c.readCalculations(pm))
+		require.NoError(t, c.ReadCalculations(pm))
 
 		tw := tabwriter.NewWriter(os.Stdout, 12, 1, 1, ' ', 0)
 

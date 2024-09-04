@@ -11,15 +11,17 @@ import (
 	"go.uber.org/zap"
 )
 
+type CommandMode int32
+
 const (
-	DefaultPort           = "8889"
-	ParametersWrite       = 3002
-	ParametersRead        = 3003
-	CalculationsRead      = 3004
-	VisibilitiesRead      = 3005
-	SocketReadSizePeek    = 16
-	SocketReadSizeInteger = 4
-	SocketReadSizeChar    = 1
+	DefaultPort                       = "8889"
+	ParametersWrite       CommandMode = 3002
+	ParametersRead        CommandMode = 3003
+	CalculationsRead      CommandMode = 3004
+	VisibilitiesRead      CommandMode = 3005
+	SocketReadSizePeek                = 16
+	SocketReadSizeInteger             = 4
+	SocketReadSizeChar                = 1
 )
 
 // Locking is being used to ensure that only a single socket operation is
@@ -27,7 +29,16 @@ const (
 // Luxtronik controller, which seems unstable otherwise.
 var globalLock = &sync.Mutex{}
 
-type Client struct {
+type Client interface {
+	Connect() error
+	Close() error
+	ReadParameters(pm DataTypeMap) error
+	WriteParameter(data ...int32) error
+	ReadCalculations(pm DataTypeMap) error
+	ReadVisibilities(pm DataTypeMap) error
+}
+
+type client struct {
 	opts Options
 	host string
 	port string
@@ -41,30 +52,38 @@ type Options struct {
 	Logger      *zap.Logger
 }
 
-func MustNewClient(hostPort string, opts Options) *Client {
-	host, port, err := net.SplitHostPort(hostPort)
+func MustNewClient(hostPort string, opts Options) Client {
+	c, err := MustNew(hostPort, opts)
 	if err != nil {
 		panic(err)
+	}
+	return c
+}
+
+func MustNew(hostPort string, opts Options) (Client, error) {
+	host, port, err := net.SplitHostPort(hostPort)
+	if err != nil {
+		return nil, err
 	}
 	if opts.DialTimeout < 1 {
 		opts.DialTimeout = time.Minute
 	}
 
-	return &Client{
+	return &client{
 		opts: opts,
 		host: host,
 		port: port,
-	}
+	}, nil
 }
 
-func (c *Client) Close() error {
+func (c *client) Close() error {
 	if c.conn == nil {
 		return nil
 	}
 	return c.conn.Close()
 }
 
-func (c *Client) Connect() (err error) {
+func (c *client) Connect() (err error) {
 	if c.conn == nil {
 		c.conn, err = net.DialTimeout("tcp", c.host+":"+c.port, c.opts.DialTimeout)
 		if err != nil {
@@ -78,23 +97,28 @@ func (c *Client) Connect() (err error) {
 	return err
 }
 
-func (c *Client) readParameters(pm DataTypeMap) error {
+func (c *client) ReadParameters(pm DataTypeMap) error {
 	return c.readFromHeatPump(pm, ParametersRead, 0)
 }
 
-func (c *Client) readCalculations(pm DataTypeMap) error {
+func (c *client) WriteParameter(data ...int32) error {
+	_, err := c.write(ParametersWrite, data...)
+	return err
+}
+
+func (c *client) ReadCalculations(pm DataTypeMap) error {
 	return c.readFromHeatPump(pm, CalculationsRead, 0)
 }
 
-func (c *Client) readVisibilities(pm DataTypeMap) error {
+func (c *client) ReadVisibilities(pm DataTypeMap) error {
 	return c.readFromHeatPump(pm, VisibilitiesRead, 0)
 }
 
-func (c *Client) readFromHeatPump(pm DataTypeMap, data ...int32) error {
-	if len(data) < 2 {
+func (c *client) readFromHeatPump(pm DataTypeMap, mode CommandMode, data ...int32) error {
+	if len(data) < 1 {
 		return fmt.Errorf("")
 	}
-	_, err := c.netWrite(data...)
+	_, err := c.write(mode, data...)
 	if err != nil {
 		return fmt.Errorf("readFromHeatPump.netWrite to send %d failed: %w", data[0], err)
 	}
@@ -104,7 +128,7 @@ func (c *Client) readFromHeatPump(pm DataTypeMap, data ...int32) error {
 		return fmt.Errorf("readFromHeatPump.readInt32.cmd failed: %w", err)
 	}
 
-	if data[0] == CalculationsRead {
+	if mode == CalculationsRead {
 		var stat int32
 		stat, err = c.readInt32()
 		if err != nil {
@@ -113,8 +137,8 @@ func (c *Client) readFromHeatPump(pm DataTypeMap, data ...int32) error {
 		_ = stat
 	}
 
-	if cmd != int32(data[0]) {
-		return fmt.Errorf("readFromHeatPump. received invalid command: %d want: %d", cmd, data[0])
+	if cmd != int32(mode) {
+		return fmt.Errorf("readFromHeatPump. received invalid command: %d want: %d", cmd, mode)
 	}
 
 	length, err := c.readInt32()
@@ -124,7 +148,7 @@ func (c *Client) readFromHeatPump(pm DataTypeMap, data ...int32) error {
 
 	rawValues := make([]int32, length)
 	for i := int32(0); i < length; i++ {
-		if data[0] == VisibilitiesRead {
+		if mode == VisibilitiesRead {
 			char, err := c.readChar()
 			if err != nil {
 				return fmt.Errorf("readFromHeatPump.readint32.paramID at index %d failed: %w", i, err)
@@ -143,7 +167,7 @@ func (c *Client) readFromHeatPump(pm DataTypeMap, data ...int32) error {
 	return pm.SetRawValues(rawValues)
 }
 
-func (c *Client) readInt32() (int32, error) {
+func (c *client) readInt32() (int32, error) {
 	var buf [SocketReadSizeInteger]byte
 	n, err := c.conn.Read(buf[:])
 	if err != nil {
@@ -153,7 +177,7 @@ func (c *Client) readInt32() (int32, error) {
 	return int32(binary.BigEndian.Uint32(buf[:n])), nil
 }
 
-func (c *Client) readChar() (byte, error) {
+func (c *client) readChar() (byte, error) {
 	var buf [SocketReadSizeChar]byte
 	n, err := c.conn.Read(buf[:])
 	if err != nil {
@@ -182,13 +206,14 @@ func (c *Client) readChar() (byte, error) {
 //
 //	to the heatpump before reading all available data
 //	from the heatpump. At 'None' it is read only.
-func (c *Client) netWrite(data ...int32) (int, error) {
+func (c *client) write(mode CommandMode, data ...int32) (int, error) {
 	globalLock.Lock()
 	defer globalLock.Unlock()
 
 	var buf bytes.Buffer // refactor later
-	if err := binary.Write(&buf, binary.BigEndian, data); err != nil {
-		return 0, fmt.Errorf("netWrite failed to encode: %#v with error: %w", data, err)
+	payload := append([]int32{int32(mode)}, data...)
+	if err := binary.Write(&buf, binary.BigEndian, payload); err != nil {
+		return 0, fmt.Errorf("netWrite failed to encode: %#v with error: %w", payload, err)
 	}
 
 	return c.conn.Write(buf.Bytes())
