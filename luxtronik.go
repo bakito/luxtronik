@@ -99,41 +99,41 @@ func (c *Client) readFromHeatPump(pm DataTypeMap, data ...int32) error {
 		return fmt.Errorf("readFromHeatPump.netWrite to send %d failed: %w", data[0], err)
 	}
 
-	cmd, err := c.readUint32()
+	cmd, err := c.readInt32()
 	if err != nil {
-		return fmt.Errorf("readFromHeatPump.readUint32.cmd failed: %w", err)
+		return fmt.Errorf("readFromHeatPump.readInt32.cmd failed: %w", err)
 	}
 
 	if data[0] == CalculationsRead {
-		var stat uint32
-		stat, err = c.readUint32()
+		var stat int32
+		stat, err = c.readInt32()
 		if err != nil {
-			return fmt.Errorf("readFromHeatPump.readUint32.cmd failed: %w", err)
+			return fmt.Errorf("readFromHeatPump.readInt32.cmd failed: %w", err)
 		}
 		_ = stat
 	}
 
-	if cmd != uint32(data[0]) {
+	if cmd != int32(data[0]) {
 		return fmt.Errorf("readFromHeatPump. received invalid command: %d want: %d", cmd, data[0])
 	}
 
-	length, err := c.readUint32()
+	length, err := c.readInt32()
 	if err != nil {
-		return fmt.Errorf("readFromHeatPump.readUint32.length failed: %w", err)
+		return fmt.Errorf("readFromHeatPump.readInt32.length failed: %w", err)
 	}
 
-	rawValues := make([]uint32, length)
-	for i := uint32(0); i < length; i++ {
+	rawValues := make([]int32, length)
+	for i := int32(0); i < length; i++ {
 		if data[0] == VisibilitiesRead {
 			char, err := c.readChar()
 			if err != nil {
-				return fmt.Errorf("readFromHeatPump.readUint32.paramID at index %d failed: %w", i, err)
+				return fmt.Errorf("readFromHeatPump.readint32.paramID at index %d failed: %w", i, err)
 			}
-			rawValues[i] = uint32(char) // 0 or 1
+			rawValues[i] = int32(char) // 0 or 1
 		} else {
-			paramID, err := c.readUint32()
+			paramID, err := c.readInt32()
 			if err != nil {
-				return fmt.Errorf("readFromHeatPump.readUint32.paramID at index %d failed: %w", i, err)
+				return fmt.Errorf("readFromHeatPump.readint32.paramID at index %d failed: %w", i, err)
 			}
 
 			rawValues[i] = paramID
@@ -143,14 +143,14 @@ func (c *Client) readFromHeatPump(pm DataTypeMap, data ...int32) error {
 	return pm.SetRawValues(rawValues)
 }
 
-func (c *Client) readUint32() (uint32, error) {
+func (c *Client) readInt32() (int32, error) {
 	var buf [SocketReadSizeInteger]byte
 	n, err := c.conn.Read(buf[:])
 	if err != nil {
 		return 0, err
 	}
 
-	return binary.BigEndian.Uint32(buf[:n]), nil
+	return int32(binary.BigEndian.Uint32(buf[:n])), nil
 }
 
 func (c *Client) readChar() (byte, error) {

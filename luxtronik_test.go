@@ -17,7 +17,7 @@ import (
 func TestIntegration_Client(t *testing.T) {
 	heatPumpIP := os.Getenv("HEATPUMP_IP")
 	if heatPumpIP == "" {
-		heatPumpIP = "192.168.0.121" + ":" + DefaultPort
+		heatPumpIP = "192.168.2.250" + ":" + DefaultPort
 	}
 
 	runTest := func(newMap func() DataTypeMap, readFromNet func(*Client, DataTypeMap) error) func(t *testing.T) {
@@ -37,9 +37,6 @@ func TestIntegration_Client(t *testing.T) {
 			tw := tabwriter.NewWriter(os.Stdout, 12, 1, 1, ' ', 0)
 			printFn := func(w io.Writer) func(i int, p *Base) {
 				return func(i int, p *Base) {
-					if p.rawValue == 0 {
-						return
-					}
 
 					fmt.Fprintf(
 						w,

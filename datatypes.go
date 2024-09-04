@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/samber/lo"
-
 	"github.com/spf13/cast"
 )
 
@@ -42,13 +41,12 @@ func (pm DataTypeMap) IterateSorted(cb func(int, *Base)) {
 	}
 }
 
-func (pm DataTypeMap) SetRawValues(data []uint32) error {
-	if dl, pml := len(data), len(pm); dl != pml {
-		return fmt.Errorf("DataTypeMap.SetRawValues length of data:%d not equal to length of DataTypeMap:%d", dl, pml)
-	}
+func (pm DataTypeMap) SetRawValues(data []int32) error {
 
 	for idx, raw := range data {
-		pm[idx].SetRaw(raw)
+		if _, ok := pm[idx]; ok {
+			pm[idx].SetRaw(raw)
+		}
 	}
 
 	return nil
@@ -63,16 +61,16 @@ func (pm DataTypeMap) GetVersion() string {
 }
 
 type Base struct {
-	customFromHP  func(uint32) any
-	customToHP    func(any) (uint32, error)
+	customFromHP  func(int32) any
+	customToHP    func(any) (int32, error)
 	codes         []string
 	returnType    reflect.Kind
 	name          string
 	class         string
 	luxtronikName string
 	unit          string
-	rawValue      uint32
-	prevRawValue  uint32
+	rawValue      int32
+	prevRawValue  int32
 	factor        float32
 	writeable     bool
 }
@@ -94,7 +92,7 @@ func (b *Base) Unit() string {
 	return b.unit
 }
 
-func (b *Base) SetRaw(val uint32) {
+func (b *Base) SetRaw(val int32) {
 	b.prevRawValue = b.rawValue
 	b.rawValue = val
 }
@@ -105,7 +103,7 @@ func (b *Base) HasChanges() bool {
 
 func (b *Base) FromHeatPump() any {
 	if b.codes != nil {
-		if b.rawValue > uint32(len(b.codes)) {
+		if b.rawValue > int32(len(b.codes)) {
 			return fmt.Sprintf("unknown code: %d", b.rawValue)
 		}
 
@@ -145,7 +143,7 @@ func roundFloat(val float64, precision uint) float32 {
 	return float32(math.Round(val*ratio) / ratio)
 }
 
-func (b *Base) ToHeatPump(val any) (uint32, error) {
+func (b *Base) ToHeatPump(val any) (int32, error) {
 	if !b.writeable {
 		return 0, fmt.Errorf("ToHeatPump can't write non-writeable value: %v", val)
 	}
@@ -154,7 +152,7 @@ func (b *Base) ToHeatPump(val any) (uint32, error) {
 		vals := cast.ToString(val)
 		for idx, code := range b.codes {
 			if code == vals {
-				return uint32(idx), nil
+				return int32(idx), nil
 			}
 		}
 		return 0, fmt.Errorf("ToHeatPump can't find value: %q in list of codes", vals)
@@ -164,17 +162,17 @@ func (b *Base) ToHeatPump(val any) (uint32, error) {
 	}
 
 	switch b.returnType {
-	case reflect.Uint32:
+	case reflect.Int32:
 		if b.factor != 0 {
-			return uint32(cast.ToFloat32(val) / b.factor), nil
+			return int32(cast.ToFloat32(val) / b.factor), nil
 		}
 		return b.rawValue, nil
 
 	case reflect.Float32:
 		if b.factor != 0 {
-			return uint32(cast.ToFloat32(val) / b.factor), nil
+			return int32(cast.ToFloat32(val) / b.factor), nil
 		}
-		return cast.ToUint32(val), nil
+		return cast.ToInt32(val), nil
 
 	default:
 		return b.rawValue, nil
@@ -417,11 +415,11 @@ func NewHours(name string, writeable bool) *Base {
 
 func NewHours2(name string, writeable bool) *Base {
 	return &Base{
-		customFromHP: func(val uint32) any {
+		customFromHP: func(val int32) any {
 			return 1 + val/2
 		},
-		customToHP: func(val any) (uint32, error) {
-			return (cast.ToUint32(val) - 1) * 2, nil
+		customToHP: func(val any) (int32, error) {
+			return (cast.ToInt32(val) - 1) * 2, nil
 		},
 		returnType:    reflect.Int64,
 		name:          "hours2",
@@ -445,15 +443,15 @@ func NewMinutes(name string, writeable bool) *Base {
 
 func NewTime(name string) *Base {
 	return &Base{
-		customFromHP: func(val uint32) any {
+		customFromHP: func(val int32) any {
 			if val < 1 {
 				return ""
 			}
 			return time.Unix(int64(val), 0).Format("2006-01-02 15:04:05")
 		},
-		customToHP: func(val any) (uint32, error) {
+		customToHP: func(val any) (int32, error) {
 			t, err := time.Parse("2006-01-02 15:04:05", cast.ToString(val))
-			return uint32(t.Unix()), err
+			return int32(t.Unix()), err
 		},
 		returnType:    reflect.String,
 		name:          "time",
@@ -465,7 +463,7 @@ func NewTime(name string) *Base {
 
 func NewMajorMinorVersion(name string) *Base {
 	return &Base{
-		customFromHP: func(val uint32) any {
+		customFromHP: func(val int32) any {
 			if val > 0 {
 				major := val / 100
 				minor := val % 100
@@ -474,7 +472,7 @@ func NewMajorMinorVersion(name string) *Base {
 			}
 			return "0"
 		},
-		customToHP: func(val any) (uint32, error) {
+		customToHP: func(val any) (int32, error) {
 			return 0, ErrWritingNotAllowed
 		},
 		returnType:    reflect.String,
@@ -519,10 +517,10 @@ func NewVentilationMode(name string, writeable bool) *Base {
 
 func NewBool(name string, writeable bool) *Base {
 	return &Base{
-		customFromHP: func(val uint32) any {
+		customFromHP: func(val int32) any {
 			return val == 1
 		},
-		customToHP: func(val any) (uint32, error) {
+		customToHP: func(val any) (int32, error) {
 			if cast.ToBool(val) {
 				return 1, nil
 			}
@@ -538,13 +536,13 @@ func NewBool(name string, writeable bool) *Base {
 
 func NewIPV4Address(name string) *Base {
 	return &Base{
-		customFromHP: func(val uint32) any {
+		customFromHP: func(val int32) any {
 			var b [SocketReadSizeInteger]byte
-			binary.BigEndian.PutUint32(b[:], val)
+			binary.BigEndian.PutUint32(b[:], uint32(val))
 			a := netip.AddrFrom4(b)
 			return a.String()
 		},
-		customToHP: func(a any) (uint32, error) {
+		customToHP: func(a any) (int32, error) {
 			panic("todo implement")
 		},
 		returnType:    reflect.String,
@@ -681,7 +679,7 @@ func NewCharacter(name string) *Base {
 		name:          "Character",
 		luxtronikName: name,
 		class:         "string",
-		customFromHP: func(u uint32) any {
+		customFromHP: func(u int32) any {
 			if 0 == u {
 				return ""
 			}
