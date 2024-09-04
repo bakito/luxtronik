@@ -1,4 +1,4 @@
-module github.com/SchumacherFM/luxtronik
+module github.com/bakito/luxtronik
 
 go 1.23.0
 
