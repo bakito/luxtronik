@@ -32,10 +32,10 @@ var globalLock = &sync.Mutex{}
 type Client interface {
 	Connect() error
 	Close() error
-	ReadParameters(pm DataTypeMap) error
+	ReadParameters(pm ParameterMap) error
 	WriteParameter(data ...int32) error
-	ReadCalculations(pm DataTypeMap) error
-	ReadVisibilities(pm DataTypeMap) error
+	ReadCalculations(pm CalculationsMap) error
+	ReadVisibilities(pm VisibilitiesMap) error
 }
 
 type client struct {
@@ -53,14 +53,14 @@ type Options struct {
 }
 
 func MustNewClient(hostPort string, opts Options) Client {
-	c, err := MustNew(hostPort, opts)
+	c, err := NewClient(hostPort, opts)
 	if err != nil {
 		panic(err)
 	}
 	return c
 }
 
-func MustNew(hostPort string, opts Options) (Client, error) {
+func NewClient(hostPort string, opts Options) (Client, error) {
 	host, port, err := net.SplitHostPort(hostPort)
 	if err != nil {
 		return nil, err
@@ -97,8 +97,8 @@ func (c *client) Connect() (err error) {
 	return err
 }
 
-func (c *client) ReadParameters(pm DataTypeMap) error {
-	return c.readFromHeatPump(pm, ParametersRead, 0)
+func (c *client) ReadParameters(pm ParameterMap) error {
+	return c.readFromHeatPump(DataTypeMap(pm), ParametersRead, 0)
 }
 
 func (c *client) WriteParameter(data ...int32) error {
@@ -106,12 +106,12 @@ func (c *client) WriteParameter(data ...int32) error {
 	return err
 }
 
-func (c *client) ReadCalculations(pm DataTypeMap) error {
-	return c.readFromHeatPump(pm, CalculationsRead, 0)
+func (c *client) ReadCalculations(pm CalculationsMap) error {
+	return c.readFromHeatPump(DataTypeMap(pm), CalculationsRead, 0)
 }
 
-func (c *client) ReadVisibilities(pm DataTypeMap) error {
-	return c.readFromHeatPump(pm, VisibilitiesRead, 0)
+func (c *client) ReadVisibilities(pm VisibilitiesMap) error {
+	return c.readFromHeatPump(DataTypeMap(pm), VisibilitiesRead, 0)
 }
 
 func (c *client) readFromHeatPump(pm DataTypeMap, mode CommandMode, data ...int32) error {

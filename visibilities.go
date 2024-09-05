@@ -1,7 +1,9 @@
 package luxtronik
 
-func NewVisibilitiesMap() DataTypeMap {
-	return DataTypeMap{
+type VisibilitiesMap DataTypeMap
+
+func NewVisibilitiesMap() VisibilitiesMap {
+	return VisibilitiesMap{
 		0:   NewUnknown("ID_Visi_NieAnzeigen"),
 		1:   NewUnknown("ID_Visi_ImmerAnzeigen"),
 		2:   NewUnknown("ID_Visi_Heizung"),

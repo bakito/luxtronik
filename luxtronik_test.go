@@ -20,7 +20,7 @@ func TestIntegration_Client(t *testing.T) {
 		heatPumpIP = "192.168.2.250" + ":" + DefaultPort
 	}
 
-	runTest := func(newMap func() DataTypeMap, readFromNet func(Client, DataTypeMap) error) func(t *testing.T) {
+	runTest := func(pm DataTypeMap, readFromNet func(Client) error) func(t *testing.T) {
 		return func(t *testing.T) {
 			c := MustNewClient(heatPumpIP, Options{
 				SafeMode: true,
@@ -31,8 +31,7 @@ func TestIntegration_Client(t *testing.T) {
 				assert.NoError(t, c.Close())
 			}()
 
-			pm := newMap()
-			require.NoError(t, readFromNet(c, pm))
+			require.NoError(t, readFromNet(c))
 
 			tw := tabwriter.NewWriter(os.Stdout, 12, 1, 1, ' ', 0)
 			printFn := func(w io.Writer) func(i int, p *Base) {
@@ -54,14 +53,17 @@ func TestIntegration_Client(t *testing.T) {
 		}
 	}
 
-	t.Run("Parameter", runTest(NewParameterMap, func(c Client, pm DataTypeMap) error {
+	pm := NewParameterMap()
+	t.Run("Parameter", runTest(DataTypeMap(pm), func(c Client) error {
 		return c.ReadParameters(pm)
 	}))
-	t.Run("Visibilities", runTest(NewVisibilitiesMap, func(c Client, pm DataTypeMap) error {
-		return c.ReadVisibilities(pm)
+	vm := NewVisibilitiesMap()
+	t.Run("Visibilities", runTest(DataTypeMap(vm), func(c Client) error {
+		return c.ReadVisibilities(vm)
 	}))
-	t.Run("Calculations", runTest(NewCalculationsMap, func(c Client, pm DataTypeMap) error {
-		return c.ReadCalculations(pm)
+	cm := NewCalculationsMap()
+	t.Run("Calculations", runTest(DataTypeMap(cm), func(c Client) error {
+		return c.ReadCalculations(cm)
 	}))
 }
 
@@ -87,7 +89,7 @@ func TestIntegration_Refreshed_Calculations(t *testing.T) {
 
 		tw := tabwriter.NewWriter(os.Stdout, 12, 1, 1, ' ', 0)
 
-		pm.IterateSorted(func(i int, p *Base) {
+		DataTypeMap(pm).IterateSorted(func(i int, p *Base) {
 			if p.rawValue == 0 || !p.HasChanges() {
 				return
 			}

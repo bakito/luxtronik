@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/bakito/luxtronik"
 )
 
@@ -16,21 +17,32 @@ func main() {
 	}
 	defer c.Close()
 
-	pm := luxtronik.NewParameterMap()
+	readParams := false
+	if readParams {
+		pm := luxtronik.NewParameterMap()
 
-	err = c.ReadParameters(pm)
-	if err != nil {
-		panic(err)
-	}
+		err = c.ReadParameters(pm)
+		if err != nil {
+			panic(err)
+		}
 
-	wk := pm[luxtronik.IdEinstWkAkt]
-	hp, err := wk.ToHeatPump(-1.)
-	if err != nil {
-		panic(err)
-	}
-	err = c.WriteParameter(luxtronik.IdEinstWkAkt, hp)
-	if err != nil {
-		panic(err)
-	}
+		wk := pm[luxtronik.ParamHeatingTargetCorrection]
+		hp, err := wk.ToHeatPump(-1.)
+		if err != nil {
+			panic(err)
+		}
+		err = c.WriteParameter(luxtronik.ParamHeatingTargetCorrection, hp)
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		pm := luxtronik.NewCalculationsMap()
+		err = c.ReadCalculations(pm)
+		if err != nil {
+			panic(err)
+		}
 
+		d1, d2, d3, t := pm.GetDisplay()
+		fmt.Printf("%s %s %s\n%s", d1, d2, t, d3)
+	}
 }
