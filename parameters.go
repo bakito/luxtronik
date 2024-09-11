@@ -3,6 +3,17 @@ package luxtronik
 const (
 	ParamHeatingTargetCorrection = 1
 	ParamWaterTarget             = 105
+
+	ParamWaterLockTime1From = 406
+	ParamWaterLockTime1To   = 407
+	ParamWaterLockTime2From = 408
+	ParamWaterLockTime2To   = 409
+	ParamWaterLockTime3From = 410
+	ParamWaterLockTime3To   = 411
+	ParamWaterLockTime4From = 412
+	ParamWaterLockTime4To   = 413
+	ParamWaterLockTime5From = 414
+	ParamWaterLockTime5To   = 415
 )
 
 type ParameterMap DataTypeMap
@@ -418,16 +429,16 @@ func NewParameterMap() ParameterMap {
 		403:                          NewUnknown("ID_Einst_SuMk2Tg_zeit_2_12"),
 		404:                          NewUnknown("ID_Einst_SuMk2Tg_zeit_2_13"),
 		405:                          NewUnknown("ID_Einst_SUBW_akt2"),
-		406:                          NewUnknown("ID_Einst_SuBwWO_zeit_0_0"),
-		407:                          NewUnknown("ID_Einst_SuBwWO_zeit_0_1"),
-		408:                          NewUnknown("ID_Einst_SuBwWO_zeit_1_0"),
-		409:                          NewUnknown("ID_Einst_SuBwWO_zeit_1_1"),
-		410:                          NewUnknown("ID_Einst_SuBwWO_zeit_2_0"),
-		411:                          NewUnknown("ID_Einst_SuBwWO_zeit_2_1"),
-		412:                          NewUnknown("ID_Einst_SuBwWO_zeit_3_0"),
-		413:                          NewUnknown("ID_Einst_SuBwWO_zeit_3_1"),
-		414:                          NewUnknown("ID_Einst_SuBwWO_zeit_4_0"),
-		415:                          NewUnknown("ID_Einst_SuBwWO_zeit_4_1"),
+		ParamWaterLockTime1From:      NewLockTime("ID_Einst_SuBwWO_zeit_0_0", true),
+		ParamWaterLockTime1To:        NewLockTime("ID_Einst_SuBwWO_zeit_0_1", true),
+		ParamWaterLockTime2From:      NewLockTime("ID_Einst_SuBwWO_zeit_1_0", true),
+		ParamWaterLockTime2To:        NewLockTime("ID_Einst_SuBwWO_zeit_1_1", true),
+		ParamWaterLockTime3From:      NewLockTime("ID_Einst_SuBwWO_zeit_2_0", true),
+		ParamWaterLockTime3To:        NewLockTime("ID_Einst_SuBwWO_zeit_2_1", true),
+		ParamWaterLockTime4From:      NewLockTime("ID_Einst_SuBwWO_zeit_3_0", true),
+		ParamWaterLockTime4To:        NewLockTime("ID_Einst_SuBwWO_zeit_3_1", true),
+		ParamWaterLockTime5From:      NewLockTime("ID_Einst_SuBwWO_zeit_4_0", true),
+		ParamWaterLockTime5To:        NewLockTime("ID_Einst_SuBwWO_zeit_4_1", true),
 		416:                          NewUnknown("ID_Einst_SuBw25_zeit_0_0"),
 		417:                          NewUnknown("ID_Einst_SuBw25_zeit_0_1"),
 		418:                          NewUnknown("ID_Einst_SuBw25_zeit_1_0"),

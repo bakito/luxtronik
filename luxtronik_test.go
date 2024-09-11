@@ -34,8 +34,8 @@ func TestIntegration_Client(t *testing.T) {
 			require.NoError(t, readFromNet(c))
 
 			tw := tabwriter.NewWriter(os.Stdout, 12, 1, 1, ' ', 0)
-			printFn := func(w io.Writer) func(i int, p *Base) {
-				return func(i int, p *Base) {
+			printFn := func(w io.Writer) func(i int32, p *Base) {
+				return func(i int32, p *Base) {
 
 					fmt.Fprintf(
 						w,
@@ -89,7 +89,7 @@ func TestIntegration_Refreshed_Calculations(t *testing.T) {
 
 		tw := tabwriter.NewWriter(os.Stdout, 12, 1, 1, ' ', 0)
 
-		DataTypeMap(pm).IterateSorted(func(i int, p *Base) {
+		DataTypeMap(pm).IterateSorted(func(i int32, p *Base) {
 			if p.rawValue == 0 || !p.HasChanges() {
 				return
 			}

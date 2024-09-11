@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/bakito/luxtronik"
 )
 
@@ -17,7 +18,7 @@ func main() {
 	}
 	defer c.Close()
 
-	readParams := false
+	readParams := true
 	if readParams {
 		pm := luxtronik.NewParameterMap()
 
@@ -26,13 +27,16 @@ func main() {
 			panic(err)
 		}
 
-		wk := pm[luxtronik.ParamHeatingTargetCorrection]
-		hp, err := wk.ToHeatPump(-1.)
-		if err != nil {
+		if err := setLockTime(pm, c, luxtronik.ParamWaterLockTime1From, "06:00"); err != nil {
 			panic(err)
 		}
-		err = c.WriteParameter(luxtronik.ParamHeatingTargetCorrection, hp)
-		if err != nil {
+		if err := setLockTime(pm, c, luxtronik.ParamWaterLockTime1To, "00:00"); err != nil {
+			panic(err)
+		}
+		if err := setLockTime(pm, c, luxtronik.ParamWaterLockTime2From, "00:00"); err != nil {
+			panic(err)
+		}
+		if err := setLockTime(pm, c, luxtronik.ParamWaterLockTime2To, "01:00"); err != nil {
 			panic(err)
 		}
 	} else {
@@ -45,4 +49,13 @@ func main() {
 		d1, d2, d3, t := pm.GetDisplay()
 		fmt.Printf("%s %s %s\n%s", d1, d2, t, d3)
 	}
+}
+
+func setLockTime(pm luxtronik.ParameterMap, c luxtronik.Client, param int32, value string) error {
+	wk := pm[param]
+	hp, err := wk.ToHeatPump(value)
+	if err != nil {
+		return err
+	}
+	return c.WriteParameter(param, hp)
 }

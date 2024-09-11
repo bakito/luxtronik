@@ -8,6 +8,7 @@ import (
 	"net/netip"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -29,9 +30,9 @@ const (
 
 var ErrWritingNotAllowed = errors.New("writing to heat pump not allowed or not possible")
 
-type DataTypeMap map[int]*Base
+type DataTypeMap map[int32]*Base
 
-func (pm DataTypeMap) IterateSorted(cb func(int, *Base)) {
+func (pm DataTypeMap) IterateSorted(cb func(int32, *Base)) {
 	keys := lo.Keys(pm)
 	sort.Slice(keys, func(i, j int) bool {
 		return keys[i] < keys[j]
@@ -44,8 +45,8 @@ func (pm DataTypeMap) IterateSorted(cb func(int, *Base)) {
 func (pm DataTypeMap) SetRawValues(data []int32) error {
 
 	for idx, raw := range data {
-		if _, ok := pm[idx]; ok {
-			pm[idx].SetRaw(raw)
+		if _, ok := pm[int32(idx)]; ok {
+			pm[int32(idx)].SetRaw(raw)
 		}
 	}
 
@@ -55,7 +56,7 @@ func (pm DataTypeMap) SetRawValues(data []int32) error {
 func (pm DataTypeMap) GetVersion() string {
 	var buf strings.Builder
 	for i := 81; i <= 87; i++ {
-		buf.WriteString(pm[i].FromHeatPump().(string))
+		buf.WriteString(pm[int32(i)].FromHeatPump().(string))
 	}
 	return buf.String()
 }
@@ -158,7 +159,7 @@ func (b *Base) ToHeatPump(val any) (int32, error) {
 		return 0, fmt.Errorf("ToHeatPump can't find value: %q in list of codes", vals)
 	}
 	if b.customToHP != nil {
-		return b.customToHP(b.rawValue)
+		return b.customToHP(val)
 	}
 
 	switch b.returnType {
@@ -427,6 +428,39 @@ func NewHours2(name string, writeable bool) *Base {
 		luxtronikName: name,
 		unit:          "h",
 		writeable:     writeable,
+	}
+}
+
+func NewLockTime(name string, writeable bool) *Base {
+	return &Base{
+		returnType:    reflect.Float32,
+		name:          "lockTime",
+		luxtronikName: name,
+		writeable:     writeable,
+		customFromHP: func(val int32) any {
+			hour := val / (60 * 60)
+			min := (val - (hour * 60 * 60)) / 60
+			return fmt.Sprintf("%02d:%02d", hour, min)
+		},
+		customToHP: func(a any) (int32, error) {
+			s, err := cast.ToStringE(a)
+			if err != nil {
+				return 0, err
+			}
+			parts := strings.Split(s, ":")
+			if len(parts) != 2 {
+				return 0, errors.New("invalid time format")
+			}
+			hour, err := strconv.Atoi(parts[0])
+			if err != nil {
+				return 0, errors.New("invalid time format")
+			}
+			min, err := strconv.Atoi(parts[1])
+			if err != nil {
+				return 0, errors.New("invalid time format")
+			}
+			return int32(hour*60*60 + min*60), nil
+		},
 	}
 }
 
