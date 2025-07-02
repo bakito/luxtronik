@@ -104,7 +104,7 @@ func (b *Base) HasChanges() bool {
 
 func (b *Base) FromHeatPump() any {
 	if b.codes != nil {
-		if b.rawValue > int32(len(b.codes)) {
+		if b.rawValue >= int32(len(b.codes)) {
 			return fmt.Sprintf("unknown code: %d", b.rawValue)
 		}
 
