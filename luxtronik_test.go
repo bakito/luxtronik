@@ -9,9 +9,6 @@ import (
 	"testing"
 	"text/tabwriter"
 	"time"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestIntegration_Client(t *testing.T) {
@@ -22,21 +19,27 @@ func TestIntegration_Client(t *testing.T) {
 
 	runTest := func(pm DataTypeMap, readFromNet func(Client) error) func(t *testing.T) {
 		return func(t *testing.T) {
+			t.Helper()
 			c := MustNewClient(heatPumpIP, Options{
 				SafeMode: true,
 			})
 
-			require.NoError(t, c.Connect())
+			if err := c.Connect(); err != nil {
+				t.Fatalf("connect client: %v", err)
+			}
 			defer func() {
-				assert.NoError(t, c.Close())
+				if err := c.Close(); err != nil {
+					t.Errorf("close client: %v", err)
+				}
 			}()
 
-			require.NoError(t, readFromNet(c))
+			if err := readFromNet(c); err != nil {
+				t.Fatalf("read from network: %v", err)
+			}
 
 			tw := tabwriter.NewWriter(os.Stdout, 12, 1, 1, ' ', 0)
 			printFn := func(w io.Writer) func(i int32, p *Base) {
 				return func(i int32, p *Base) {
-
 					fmt.Fprintf(
 						w,
 						"Number: %d\tName: %s\tType: %s\tValue: %v\tUnit: %s\n",
@@ -49,7 +52,9 @@ func TestIntegration_Client(t *testing.T) {
 				}
 			}
 			pm.IterateSorted(printFn(tw))
-			require.NoError(t, tw.Flush())
+			if err := tw.Flush(); err != nil {
+				t.Fatalf("flush tabwriter: %v", err)
+			}
 		}
 	}
 
@@ -72,9 +77,13 @@ func TestIntegration_Refreshed_Calculations(t *testing.T) {
 		SafeMode: true,
 	})
 
-	require.NoError(t, c.Connect())
+	if err := c.Connect(); err != nil {
+		t.Fatalf("connect client: %v", err)
+	}
 	defer func() {
-		assert.NoError(t, c.Close())
+		if err := c.Close(); err != nil {
+			t.Errorf("close client: %v", err)
+		}
 	}()
 
 	pm := NewCalculationsMap()
@@ -84,8 +93,9 @@ func TestIntegration_Refreshed_Calculations(t *testing.T) {
 	tkr := time.NewTicker(3 * time.Second)
 
 	for {
-
-		require.NoError(t, c.ReadCalculations(pm))
+		if err := c.ReadCalculations(pm); err != nil {
+			t.Fatalf("read calculations: %v", err)
+		}
 
 		tw := tabwriter.NewWriter(os.Stdout, 12, 1, 1, ' ', 0)
 
@@ -105,12 +115,14 @@ func TestIntegration_Refreshed_Calculations(t *testing.T) {
 			)
 		})
 
-		require.NoError(t, tw.Flush())
+		if err := tw.Flush(); err != nil {
+			t.Fatalf("flush tabwriter: %v", err)
+		}
 		select {
 		case <-sigChan:
 			return
 		case tm := <-tkr.C:
-			println(tm.Format(time.DateTime), strings.Repeat("=", 200))
+			fmt.Println(tm.Format(time.DateTime), strings.Repeat("=", 200))
 			continue
 		}
 	}

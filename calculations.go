@@ -304,9 +304,15 @@ func NewCalculationsMap() CalculationsMap {
 	}
 }
 
-func (pm CalculationsMap) GetDisplay() (string, string, string, time.Duration) {
-	return pm[CalcDisplayRow1].FromHeatPump().(string),
-		pm[CalcDisplayRow2].FromHeatPump().(string),
-		pm[CalcDisplayRow3].FromHeatPump().(string),
-		pm[CalcDisplayTime].FromHeatPump().(time.Duration)
+func (pm CalculationsMap) GetDisplay() (row1, row2, row3 string, t time.Duration) {
+	row1, ok1 := pm[CalcDisplayRow1].FromHeatPump().(string)
+	row2, ok2 := pm[CalcDisplayRow2].FromHeatPump().(string)
+	row3, ok3 := pm[CalcDisplayRow3].FromHeatPump().(string)
+	duration, ok4 := pm[CalcDisplayTime].FromHeatPump().(time.Duration)
+
+	if !ok1 || !ok2 || !ok3 || !ok4 {
+		return "", "", "", 0
+	}
+
+	return row1, row2, row3, duration
 }

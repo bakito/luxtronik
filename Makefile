@@ -1,6 +1,8 @@
 # Include toolbox tasks
 include ./.toolbox.mk
 
-lint: golangci-lint
-	$(GOLANGCI_LINT) run --fix
+lint: tb.golangci-lint
+	$(TB_GOLANGCI_LINT) run --fix
 
+test:
+	go test -v ./...

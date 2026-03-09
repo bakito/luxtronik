@@ -290,7 +290,7 @@ func NewVisibilitiesMap() VisibilitiesMap {
 		283: NewUnknown("ID_Visi_BACnet"),
 		284: NewUnknown("ID_Visi_Sprachen_SLOWAKISCH"),
 		285: NewUnknown("ID_Visi_Sprachen_LETTISCH"),
-		286: NewUnknown("ID_Visi_Sprachen_FINNISCH"),
+		286: NewUnknown("ID_Visi_Sprachen_FINNISH"),
 		287: NewUnknown("ID_Visi_Kalibrierung_LWD"),
 		288: NewUnknown("ID_Visi_IN_Durchfluss"),
 		289: NewUnknown("ID_Visi_LIN_ANSAUG_VERDICHTER"),
