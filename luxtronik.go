@@ -3,6 +3,7 @@ package luxtronik
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"net"
 	"sync"
@@ -85,7 +86,8 @@ func (c *client) Close() error {
 
 func (c *client) Connect() (err error) {
 	if c.conn == nil {
-		c.conn, err = net.DialTimeout("tcp", c.host+":"+c.port, c.opts.DialTimeout)
+		dialer := &net.Dialer{Timeout: c.opts.DialTimeout}
+		c.conn, err = dialer.Dial("tcp", c.host+":"+c.port)
 		if err != nil {
 			return err
 		}
@@ -102,7 +104,7 @@ func (c *client) ReadParameters(pm ParameterMap) error {
 }
 
 func (c *client) WriteParameter(data ...int32) error {
-	_, err := c.write(ParametersWrite, data...)
+	err := c.write(ParametersWrite, data...)
 	return err
 }
 
@@ -116,9 +118,9 @@ func (c *client) ReadVisibilities(pm VisibilitiesMap) error {
 
 func (c *client) readFromHeatPump(pm DataTypeMap, mode CommandMode, data ...int32) error {
 	if len(data) < 1 {
-		return fmt.Errorf("")
+		return errors.New("")
 	}
-	_, err := c.write(mode, data...)
+	err := c.write(mode, data...)
 	if err != nil {
 		return fmt.Errorf("readFromHeatPump.netWrite to send %d failed: %w", data[0], err)
 	}
@@ -147,7 +149,7 @@ func (c *client) readFromHeatPump(pm DataTypeMap, mode CommandMode, data ...int3
 	}
 
 	rawValues := make([]int32, length)
-	for i := int32(0); i < length; i++ {
+	for i := range length {
 		if mode == VisibilitiesRead {
 			char, err := c.readChar()
 			if err != nil {
@@ -187,7 +189,6 @@ func (c *client) readChar() (byte, error) {
 		return 0, fmt.Errorf("read length %d is not equal to char size of %d", n, SocketReadSizeChar)
 	}
 
-	// res := binary.BigEndian.Uint32()
 	return buf[0], nil
 }
 
@@ -206,15 +207,16 @@ func (c *client) readChar() (byte, error) {
 //
 //	to the heatpump before reading all available data
 //	from the heatpump. At 'None' it is read only.
-func (c *client) write(mode CommandMode, data ...int32) (int, error) {
+func (c *client) write(mode CommandMode, data ...int32) error {
 	globalLock.Lock()
 	defer globalLock.Unlock()
 
 	var buf bytes.Buffer // refactor later
 	payload := append([]int32{int32(mode)}, data...)
 	if err := binary.Write(&buf, binary.BigEndian, payload); err != nil {
-		return 0, fmt.Errorf("netWrite failed to encode: %#v with error: %w", payload, err)
+		return fmt.Errorf("netWrite failed to encode: %#v with error: %w", payload, err)
 	}
 
-	return c.conn.Write(buf.Bytes())
+	_, err := c.conn.Write(buf.Bytes())
+	return err
 }

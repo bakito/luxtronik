@@ -7,7 +7,7 @@ import (
 	"math"
 	"net/netip"
 	"reflect"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -34,16 +34,13 @@ type DataTypeMap map[int32]*Base
 
 func (pm DataTypeMap) IterateSorted(cb func(int32, *Base)) {
 	keys := lo.Keys(pm)
-	sort.Slice(keys, func(i, j int) bool {
-		return keys[i] < keys[j]
-	})
+	slices.Sort(keys)
 	for _, key := range keys {
 		cb(key, pm[key])
 	}
 }
 
 func (pm DataTypeMap) SetRawValues(data []int32) error {
-
 	for idx, raw := range data {
 		if _, ok := pm[int32(idx)]; ok {
 			pm[int32(idx)].SetRaw(raw)
@@ -55,8 +52,11 @@ func (pm DataTypeMap) SetRawValues(data []int32) error {
 
 func (pm DataTypeMap) GetVersion() string {
 	var buf strings.Builder
-	for i := 81; i <= 87; i++ {
-		buf.WriteString(pm[int32(i)].FromHeatPump().(string))
+	for i := int32(81); i <= 87; i++ {
+		res := pm[i].FromHeatPump()
+		if s, ok := res.(string); ok {
+			buf.WriteString(s)
+		}
 	}
 	return buf.String()
 }
@@ -439,8 +439,8 @@ func NewLockTime(name string, writeable bool) *Base {
 		writeable:     writeable,
 		customFromHP: func(val int32) any {
 			hour := val / (60 * 60)
-			min := (val - (hour * 60 * 60)) / 60
-			return fmt.Sprintf("%02d:%02d", hour, min)
+			mini := (val - (hour * 60 * 60)) / 60
+			return fmt.Sprintf("%02d:%02d", hour, mini)
 		},
 		customToHP: func(a any) (int32, error) {
 			s, err := cast.ToStringE(a)
@@ -455,11 +455,11 @@ func NewLockTime(name string, writeable bool) *Base {
 			if err != nil {
 				return 0, errors.New("invalid time format")
 			}
-			min, err := strconv.Atoi(parts[1])
+			mini, err := strconv.Atoi(parts[1])
 			if err != nil {
 				return 0, errors.New("invalid time format")
 			}
-			return int32(hour*60*60 + min*60), nil
+			return int32(hour*60*60 + mini*60), nil
 		},
 	}
 }
@@ -502,11 +502,10 @@ func NewMajorMinorVersion(name string) *Base {
 				major := val / 100
 				minor := val % 100
 				return fmt.Sprintf("%d.%d", major, minor)
-
 			}
 			return "0"
 		},
-		customToHP: func(val any) (int32, error) {
+		customToHP: func(any) (int32, error) {
 			return 0, ErrWritingNotAllowed
 		},
 		returnType:    reflect.String,
@@ -576,7 +575,7 @@ func NewIPV4Address(name string) *Base {
 			a := netip.AddrFrom4(b)
 			return a.String()
 		},
-		customToHP: func(a any) (int32, error) {
+		customToHP: func(any) (int32, error) {
 			panic("todo implement")
 		},
 		returnType:    reflect.String,
@@ -714,7 +713,7 @@ func NewCharacter(name string) *Base {
 		luxtronikName: name,
 		class:         "string",
 		customFromHP: func(u int32) any {
-			if 0 == u {
+			if u == 0 {
 				return ""
 			}
 			if int(u) < len(charTable) {
