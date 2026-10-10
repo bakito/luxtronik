@@ -1,6 +1,6 @@
 module github.com/bakito/luxtronik
 
-go 1.26
+go 1.27.2
 
 require (
 	github.com/samber/lo v1.53.0
@@ -12,5 +12,5 @@ require (
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/stretchr/testify v1.11.1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/text v0.39.0 // indirect
+	golang.org/x/text v0.41.0 // indirect
 )
